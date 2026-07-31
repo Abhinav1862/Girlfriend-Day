@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Love Story | Pink & Purple 3D</title>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  
+  <!-- Three.js Library for 3D Background Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #180828;
+      color: #ffffff;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      perspective: 1200px;
+    }
+
+    /* 3D WebGL Canvas Layer */
+    #webgl-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* App Container */
+    .app-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      transform-style: preserve-3d;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    /* PAGE TRANSITION ANIMATIONS */
+    .anim-flip-out { animation: flipOut 0.7s forwards ease-in-out; }
+    .anim-flip-in { animation: flipIn 0.7s forwards ease-in-out; }
+
+    @keyframes flipOut {
+      from { transform: rotateY(0deg) scale(1); opacity: 1; }
+      to { transform: rotateY(-90deg) scale(0.8); opacity: 0; }
+    }
+    @keyframes flipIn {
+      from { transform: rotateY(90deg) scale(0.8); opacity: 0; }
+      to { transform: rotateY(0deg) scale(1); opacity: 1; }
+    }
+
+    .anim-zoom-out { animation: zoomOut 0.7s forwards ease-in-out; }
+    .anim-zoom-in { animation: zoomIn 0.7s forwards ease-in-out; }
+
+    @keyframes zoomOut {
+      from { transform: scale(1); filter: blur(0px); opacity: 1; }
+      to { transform: scale(0.3); filter: blur(15px); opacity: 0; }
+    }
+    @keyframes zoomIn {
+      from { transform: scale(1.8); filter: blur(15px); opacity: 0; }
+      to { transform: scale(1); filter: blur(0px); opacity: 1; }
+    }
+
+    .anim-heartbeat-out { animation: heartbeatOut 0.7s forwards ease-in-out; }
+    .anim-heartbeat-in { animation: heartbeatIn 0.7s forwards ease-in-out; }
+
+    @keyframes heartbeatOut {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 0.8; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes heartbeatIn {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.15); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Typography & UI Elements */
+    .title {
+      font-family: 'Dancing Script', cursive;
+      font-size: 3.5rem;
+      background: linear-gradient(45deg, #d870f5, #ff66c4, #f72585);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 20px;
+      text-align: center;
+      text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .action-btn {
+      margin-top: 25px;
+      padding: 12px 35px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(45deg, #b5179e, #ff66c4);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(230, 57, 175, 0.5);
+      transition: all 0.5s ease;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 15px 30px rgba(255, 102, 196, 0.8);
+    }
+
+    /* Hidden Button Initial State */
+    .action-btn.hidden-btn {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+    }
+
+    .action-btn.visible-btn {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .hero-subtitle {
+      font-size: 1.2rem;
+      color: #e2c2f6;
+      text-align: center;
+      max-width: 500px;
+    }
+
+    /* DYNAMIC NO-BACKGROUND PHOTO STAGE */
+    .photo-stage {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      height: 380px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .floating-photo-item {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .floating-photo-item img {
+      width: 320px;
+      height: 320px;
+      object-fit: cover;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(216, 112, 245, 0.5);
+    }
+
+    .floating-caption {
+      margin-top: 18px;
+      font-family: 'Dancing Script', cursive;
+      font-size: 1.8rem;
+      color: #ff66c4;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.9);
+      text-align: center;
+    }
+
+    /* INDIVIDUAL DYNAMIC PHOTO TRANSITIONS */
+    .photo-anim-enter-1 { animation: flyIn3D 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    .photo-anim-exit-1 { animation: flyOut3D 1s ease-in forwards; }
+
+    @keyframes flyIn3D {
+      0% { transform: translateX(-120vw) rotateY(-60deg) scale(0.3); opacity: 0; }
+      100% { transform: translateX(0) rotateY(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes flyOut3D {
+      0% { transform: translateX(0) rotateY(0deg) scale(1); opacity: 1; }
+      100% { transform: translateX(120vw) rotateY(60deg) scale(0.3); opacity: 0; }
+    }
+
+    .photo-anim-enter-2 { animation: zoomInDeep 1s ease-out forwards; }
+    .photo-anim-exit-2 { animation: shrinkDown 1s ease-in forwards; }
+
+    @keyframes zoomInDeep {
+      0% { transform: translateZ(-1000px) rotate(-30deg); opacity: 0; }
+      100% { transform: translateZ(0) rotate(0deg); opacity: 1; }
+    }
+    @keyframes shrinkDown {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0) rotate(45deg); opacity: 0; }
+    }
+
+    .photo-anim-enter-3 { animation: bounceUp 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
+    .photo-anim-exit-3 { animation: exitSky 1s ease-in forwards; }
+
+    @keyframes bounceUp {
+      0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    @keyframes exitSky {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-100vh) scale(1.2); opacity: 0; }
+    }
+
+    /* Timeline & Secret Note Styling */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .timeline-card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      border-left: 4px solid #ff66c4;
+      border-radius: 0 15px 15px 0;
+      padding: 18px 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .timeline-card h3 { color: #d870f5; font-size: 1.2rem; }
+    .timeline-card span { font-size: 0.8rem; color: #d1b3e8; margin-bottom: 5px; display: block; }
+
+    .secret-box {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 102, 196, 0.3);
+      border-radius: 20px;
+      padding: 35px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .secret-box input {
+      padding: 12px 20px;
+      border-radius: 25px;
+      border: 1px solid #ff66c4;
+      background: transparent;
+      color: #fff;
+      text-align: center;
+      outline: none;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      width: 80%;
+    }
+
+    .secret-message {
+      display: none;
+      margin-top: 20px;
+      font-family: 'Dancing Script', cursive;
+      font-size: 1.8rem;
+      color: #ff66c4;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .title { font-size: 2.5rem; }
+      .floating-photo-item img { width: 260px; height: 260px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Canvas Container for 3D Three.js Particles -->
+  <canvas id="webgl-bg"></canvas>
+
+  <!-- Main App Container -->
+  <div class="app-container">
+
+    <!-- SLIDE 0: HOME -->
+    <div class="slide active" id="slide-0">
+      <h1 class="title">To My Poochakutty, My Achutty, My Vavachi</h1>
+      <p class="hero-subtitle">Every memory with you is a priceless treasure. Explore our story below. Muthew I don't know if you will like it but be ready for a Wonderful Girlfriend's Day.</p>
+      <button class="action-btn" onclick="goToSlide(1)">Watch Memories ➔</button>
+    </div>
+
+    <!-- SLIDE 1: DYNAMIC FLOATING PHOTOS -->
+    <div class="slide" id="slide-1">
+      <h2 class="title">Our Favorite Memories</h2>
+      
+      <div class="photo-stage">
+        
+        <!-- PHOTO 1 -->
+        <div class="floating-photo-item" id="fphoto-0">
+          <img src="images/photo1.jpeg" alt="Photo 1" ...>
+          <div class="floating-caption">" The first photo but the favourite one."</div>
+        </div>
+
+        <!-- PHOTO 2 -->
+        <div class="floating-photo-item" id="fphoto-1">
+          <img src="images/photo2.jpeg" alt="Photo 2" ...>
+          <div class="floating-caption">"I want to draw many more beautiful mehadis in those soft hand of yours."</div>
+        </div>
+
+        <!-- PHOTO 3 -->
+        <div class="floating-photo-item" id="fphoto-2">
+          <img src="images/photo3.jpeg" alt="Photo 3" ...>
+          <div class="floating-caption">"Oh maaahnnn... I got the most sexyyy baddiee in my lyff.."</div>
+        </div>
+
+      </div>
+
+      <!-- Initially Hidden Action Button -->
+      <button class="action-btn hidden-btn" id="photoNextBtn" onclick="goToSlide(2)">Next: Timeline ➔</button>
+    </div>
+
+    <!-- SLIDE 2: TIMELINE -->
+    <div class="slide" id="slide-2">
+      <h2 class="title">Our Milestones</h2>
+      <div class="timeline">
+        <div class="timeline-card">
+          <h3>The First Hello</h3>
+          <span>July 04, 2025</span>
+          <p>The editing aparatha that made us talk.</p>
+        </div>
+        <div class="timeline-card">
+          <h3>Our First Valentine Date</h3>
+          <span>February 14, 2026</span>
+          <p>Seeing you enjoy it so much made the date worth it. Planning much more in the Future.</p>
+        </div>
+        <div class="timeline-card">
+          <h3>Made It Official</h3>
+          <span>October 09, 2026</span>
+          <p>The happiest day when I got you and even the GOds approved..</p>
+        </div>
+      </div>
+      <button class="action-btn" onclick="goToSlide(3)">Secret Note ➔</button>
+    </div>
+
+    <!-- SLIDE 3: SECRET LETTER -->
+    <div class="slide" id="slide-3">
+      <h2 class="title">For Your Eyes Only</h2>
+      <div class="secret-box">
+        <p style="margin-bottom: 15px; color: #e2c2f6;">Enter our secret passkey to unlock your letter:</p>
+        <input type="password" id="passkey" placeholder="Enter code (your favourite number)">
+        <br>
+        <button class="action-btn" style="margin-top:0;" onclick="unlockMessage()">Unlock Note ♥</button>
+        <div class="secret-message" id="secretNote">
+          "Thank you for bringing so much light into my life. Every day with you is my new favorite day. I love you endlessly!"
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================================
+    // FIXED 3D THREE.JS PINK & PURPLE BACKGROUND ENGINE
+    // ==========================================================
+    const canvas = document.getElementById('webgl-bg');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    camera.position.z = 30;
+
+    // Create 3D Floating Heart Geometry
+    function createHeartShape() {
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.bezierCurveTo(0, 0.5, -0.8, 1, -1.5, 1);
+      shape.bezierCurveTo(-2.5, 1, -2.5, -0.5, -2.5, -0.5);
+      shape.bezierCurveTo(-2.5, -1.5, -1.5, -2.5, 0, -3.5);
+      shape.bezierCurveTo(1.5, -2.5, 2.5, -1.5, 2.5, -0.5);
+      shape.bezierCurveTo(2.5, -0.5, 2.5, 1, 1.5, 1);
+      shape.bezierCurveTo(0.8, 1, 0, 0.5, 0, 0);
+      return shape;
+    }
+
+    const extrudeSettings = { depth: 0.4, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.2, bevelThickness: 0.2 };
+    const heartGeo = new THREE.ExtrudeGeometry(createHeartShape(), extrudeSettings);
+    
+    // Pink & Purple Materials with correct JS Hex Values
+    const heartMaterials = [
+      new THREE.MeshPhongMaterial({ color: 0xff66c4, emissive: 0x7209b7, shininess: 100 }), 
+      new THREE.MeshPhongMaterial({ color: 0xd870f5, emissive: 0x3a0ca3, shininess: 90 }),  
+      new THREE.MeshPhongMaterial({ color: 0xf72585, emissive: 0x4a0072, shininess: 80 })   
+    ];
+
+    const heartsGroup = new THREE.Group();
+    const heartMeshCount = 40;
+
+    for (let i = 0; i < heartMeshCount; i++) {
+      const mat = heartMaterials[i % 3];
+      const mesh = new THREE.Mesh(heartGeo, mat);
+      
+      mesh.position.x = (Math.random() - 0.5) * 80;
+      mesh.position.y = (Math.random() - 0.5) * 80;
+      mesh.position.z = (Math.random() - 0.5) * 60;
+      
+      const scale = Math.random() * 0.4 + 0.2;
+      mesh.scale.set(scale, scale, scale);
+      mesh.rotation.z = Math.PI; // Flip upright
+      mesh.rotation.x = Math.random() * Math.PI;
+      mesh.rotation.y = Math.random() * Math.PI;
+
+      mesh.userData = {
+        rotSpeedX: (Math.random() - 0.5) * 0.02,
+        rotSpeedY: (Math.random() - 0.5) * 0.02,
+        floatSpeed: Math.random() * 0.05 + 0.02
+      };
+
+      heartsGroup.add(mesh);
+    }
+    scene.add(heartsGroup);
+
+    // Pink & Purple Scene Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const pinkLight = new THREE.PointLight(0xff66c4, 2.5, 100);
+    pinkLight.position.set(15, 15, 20);
+    scene.add(pinkLight);
+
+    const purpleLight = new THREE.PointLight(0xb5179e, 2, 100);
+    purpleLight.position.set(-15, -15, 10);
+    scene.add(purpleLight);
+
+    // Mouse Parallax Interaction
+    let mouseX = 0;
+    let mouseY = 0;
+
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        mouseX = (e.touches[0].clientX / window.innerWidth - 0.5) * 2;
+        mouseY = (e.touches[0].clientY / window.innerHeight - 0.5) * 2;
+      }
+    });
+
+    // 3D Render Loop
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+
+      camera.position.x += (mouseX * 5 - camera.position.x) * 0.03;
+      camera.position.y += (-mouseY * 5 - camera.position.y) * 0.03;
+      camera.lookAt(scene.position);
+
+      heartsGroup.children.forEach(mesh => {
+        mesh.rotation.x += mesh.userData.rotSpeedX;
+        mesh.rotation.y += mesh.userData.rotSpeedY;
+        mesh.position.y += mesh.userData.floatSpeed;
+
+        if (mesh.position.y > 40) {
+          mesh.position.y = -40;
+        }
+      });
+
+      renderer.render(scene, camera);
+    }
+    animate3D();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ==========================================================
+    // PAGE NAVIGATION ENGINE
+    // ==========================================================
+    let currentSlideIndex = 0;
+    let isAnimating = false;
+    const slides = document.querySelectorAll('.slide');
+
+    function goToSlide(targetIndex) {
+      if (targetIndex === currentSlideIndex || isAnimating) return;
+
+      isAnimating = true;
+      const currentSlide = slides[currentSlideIndex];
+      const targetSlide = slides[targetIndex];
+
+      let outAnimClass = '';
+      let inAnimClass = '';
+
+      if ((currentSlideIndex === 0 && targetIndex === 1) || (currentSlideIndex === 1 && targetIndex === 0)) {
+        outAnimClass = 'anim-flip-out';
+        inAnimClass = 'anim-flip-in';
+      } else if ((currentSlideIndex === 1 && targetIndex === 2) || (currentSlideIndex === 2 && targetIndex === 1)) {
+        outAnimClass = 'anim-zoom-out';
+        inAnimClass = 'anim-zoom-in';
+      } else {
+        outAnimClass = 'anim-heartbeat-out';
+        inAnimClass = 'anim-heartbeat-in';
+      }
+
+      currentSlide.classList.add(outAnimClass);
+
+      setTimeout(() => {
+        currentSlide.classList.remove('active', outAnimClass);
+        targetSlide.classList.add('active', inAnimClass);
+
+        setTimeout(() => {
+          targetSlide.classList.remove(inAnimClass);
+          currentSlideIndex = targetIndex;
+          isAnimating = false;
+
+          if (targetIndex === 1) {
+            startPhotoSequence();
+          } else {
+            stopPhotoSequence();
+          }
+
+        }, 650);
+      }, 650);
+    }
+
+    // AUTOMATIC DYNAMIC PHOTO ANIMATION ENGINE
+    let photoItems = [];
+    let photoIndex = 0;
+    let photoLoopTimer = null;
+    let hasCompletedFirstLoop = false;
+    const displayTime = 3000;
+    const animDuration = 1000;
+
+    function startPhotoSequence() {
+      photoItems = document.querySelectorAll('.floating-photo-item');
+      if (photoItems.length === 0) return;
+
+      stopPhotoSequence();
+      photoIndex = 0;
+      animateSinglePhoto();
+    }
+
+    function animateSinglePhoto() {
+      const photoCount = photoItems.length;
+      const currentPhoto = photoItems[photoIndex];
+      const animType = (photoIndex % 3) + 1;
+
+      photoItems.forEach(item => {
+        item.className = 'floating-photo-item';
+      });
+
+      currentPhoto.classList.add(`photo-anim-enter-${animType}`);
+
+      photoLoopTimer = setTimeout(() => {
+        currentPhoto.classList.remove(`photo-anim-enter-${animType}`);
+        currentPhoto.classList.add(`photo-anim-exit-${animType}`);
+
+        setTimeout(() => {
+          currentPhoto.classList.remove(`photo-anim-exit-${animType}`);
+          photoIndex = photoIndex + 1;
+
+          if (photoIndex >= photoCount) {
+            photoIndex = 0;
+            if (!hasCompletedFirstLoop) {
+              hasCompletedFirstLoop = true;
+              const nextBtn = document.getElementById('photoNextBtn');
+              nextBtn.classList.remove('hidden-btn');
+              nextBtn.classList.add('visible-btn');
+            }
+          }
+          
+          if (currentSlideIndex === 1) {
+            animateSinglePhoto();
+          }
+        }, animDuration);
+
+      }, displayTime);
+    }
+
+    function stopPhotoSequence() {
+      clearTimeout(photoLoopTimer);
+      if (photoItems) {
+        photoItems.forEach(item => {
+          item.className = 'floating-photo-item';
+        });
+      }
+    }
+
+    // Secret Note Unlock
+    function unlockMessage() {
+      const input = document.getElementById('passkey').value;
+      const note = document.getElementById('secretNote');
+
+      if (input === '9') {
+        note.style.display = 'block';
+      } else {
+        alert('Wrong code! (Hint: Your Jersey Number)');
+      }
+    }
+  </script>
+</body>
+</html>
